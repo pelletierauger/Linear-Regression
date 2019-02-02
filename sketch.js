@@ -24,8 +24,12 @@ function setup() {
     if (!looping) {
         noLoop();
     }
-    m = tf.variable(tf.scalar(random(1)));
-    b = tf.variable(tf.scalar(random(1)));
+    const mSeed = tf.scalar(random(1));
+    const bSeed = tf.scalar(random(1));
+    m = tf.variable(mSeed);
+    b = tf.variable(bSeed);
+    mSeed.dispose();
+    bSeed.dispose();
 }
 
 function draw() {
