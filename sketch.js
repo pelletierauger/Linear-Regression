@@ -3,13 +3,13 @@ let socket, cnvs, ctx, canvasDOM;
 let fileName = "./frames/sketch";
 let maxFrames = 20;
 
-let m, b;
+let a, b, c, d;
 
 let x_vals = [];
 let y_vals = [];
 
 const learningRate = 0.5;
-const optimizer = tf.train.sgd(learningRate);
+const optimizer = tf.train.adam(learningRate);
 
 function setup() {
     socket = io.connect('http://localhost:8080');
@@ -24,12 +24,18 @@ function setup() {
     if (!looping) {
         noLoop();
     }
-    const mSeed = tf.scalar(random(1));
-    const bSeed = tf.scalar(random(1));
-    m = tf.variable(mSeed);
+    const aSeed = tf.scalar(random(-1, 1));
+    const bSeed = tf.scalar(random(-1, 1));
+    const cSeed = tf.scalar(random(-1, 1));
+    const dSeed = tf.scalar(random(-1, 1));
+    a = tf.variable(aSeed);
     b = tf.variable(bSeed);
-    mSeed.dispose();
+    c = tf.variable(cSeed);
+    d = tf.variable(dSeed);
+    aSeed.dispose();
     bSeed.dispose();
+    cSeed.dispose();
+    dSeed.dispose();
 }
 
 function draw() {
@@ -45,20 +51,29 @@ function draw() {
         // });
         noStroke();
         stroke(0);
+        fill(0);
         for (let i = 0; i < x_vals.length; i++) {
-            let px = map(x_vals[i], 0, 1, 0, width);
-            let py = map(y_vals[i], 0, 1, height, 0);
+            let px = map(x_vals[i], -1, 1, 0, width);
+            let py = map(y_vals[i], -1, 1, height, 0);
             ellipse(px, py, 5);
         }
-        const lineX = [0, 1];
-        const ys = tf.tidy(() => predict(lineX));
-        const lineY = ys.dataSync();
+        const curveX = [];
+        for (let x = -1; x <= 1.05; x += 0.05) {
+            curveX.push(x);
+        }
+
+        const ys = tf.tidy(() => predict(curveX));
+        const curveY = ys.dataSync();
+        noFill();
         ys.dispose();
-        let x1 = map(lineX[0], 0, 1, 0, width);
-        let x2 = map(lineX[1], 0, 1, 0, width);
-        let y1 = map(lineY[0], 0, 1, height, 0);
-        let y2 = map(lineY[1], 0, 1, height, 0);
-        line(x1, y1, x2, y2);
+        beginShape();
+        for (let i = 0; i < curveX.length; i++) {
+            let x = map(curveX[i], -1, 1, 0, width);
+            let y = map(curveY[i], -1, 1, height, 0);
+            vertex(x, y);
+        }
+        endShape();
+
     }
     if (exporting && frameCount < maxFrames) {
         frameExport();
@@ -73,13 +88,20 @@ function loss(pred, labels) {
 function predict(x) {
     const xs = tf.tensor1d(x);
     // y = mx + b;
-    const ys = xs.mul(m).add(b);
+    // const ys = xs.mul(m).add(b);
+
+    // y = ax^2 + bx + c
+    // const ys = xs.square().mul(a).add(xs.mul(b)).add(c);
+    const ys = xs.pow(tf.scalar(3)).mul(a)
+        .add(xs.square().mul(b))
+        .add(xs.mul(c))
+        .add(d);
     return ys;
 }
 
 function mousePressed() {
-    let x = map(mouseX, 0, width, 0, 1);
-    let y = map(mouseY, 0, height, 1, 0);
+    let x = map(mouseX, 0, width, -1, 1);
+    let y = map(mouseY, 0, height, 1, -1);
     x_vals.push(x);
     y_vals.push(y);
 }
